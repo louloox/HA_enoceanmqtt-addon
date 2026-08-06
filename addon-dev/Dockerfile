@@ -3,6 +3,11 @@ FROM $BUILD_FROM
 
 ARG BUILD_VERSION
 
+# Pinned commits of the louloox forks (reproducible build).
+# Bump these when you intentionally move the forks forward, then rebuild the add-on.
+ARG ENOCEAN_SHA=088b91866234dcff3d90fec79cb761716b39aa67
+ARG HA_ENOCEANMQTT_SHA=0aa4dbda391adff01f4376c4b6688ea52bb4ea79
+
 # Create Working Directory
 WORKDIR /app
 
@@ -15,24 +20,11 @@ RUN apk add --no-cache python3 py3-pip git && \
     pip3 install tinydb && \
     pip3 install setuptools && \
     pip3 install paho-mqtt==1.6.1 && \
-    pip3 install git+https://github.com/louloox/enocean.git && \
+    pip3 install git+https://github.com/louloox/enocean.git@${ENOCEAN_SHA} && \
     git clone -b master --single-branch --depth 1 https://github.com/embyt/enocean-mqtt.git && \
     cd enocean-mqtt && python3 setup.py develop && cd .. && \
-    if [ "${BUILD_VERSION}" = "head" ]; then \
-        echo "Installing from repository head" && \
-        git clone -b develop --single-branch --depth 1 https://github.com/louloox/HA_enoceanmqtt.git ; \
-    else \
-        if [ -z "${BUILD_VERSION##*.*.*}" ]; then \
-            echo "Installing development version ${BUILD_VERSION%-*}" ; \
-        else \
-            echo "Installing stable version ${BUILD_VERSION%-*}" ; \
-        fi; \
-        wget -nv -O "/app.tar.gz" \
-            "https://github.com/mak-gitdev/HA_enoceanmqtt/archive/refs/tags/${BUILD_VERSION%-*}.tar.gz" && \
-        echo "Extracting /app.tar.gz" && tar xzf "/app.tar.gz" && \
-        rm "/app.tar.gz" && \
-        mv -v "HA_enoceanmqtt-${BUILD_VERSION%-*}" HA_enoceanmqtt ; \
-    fi; \
+    git clone https://github.com/louloox/HA_enoceanmqtt.git && \
+    cd HA_enoceanmqtt && git checkout ${HA_ENOCEANMQTT_SHA} && cd .. && \
     cp -rf HA_enoceanmqtt/enoceanmqtt enocean-mqtt && \
     rm -rf HA_enoceanmqtt
 
